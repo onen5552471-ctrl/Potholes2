@@ -20,10 +20,29 @@ export default function Dashboard() {
     fetchJobs();
   }, []);
 
-  // ADD job to Firebase
-  const addJob = async () => {
-    if (!input) return;
+const addJob = async () => {
+  if (!jobInput) return;
 
+  await addDoc(collection(db, "jobs"), {
+    name: jobInput,
+    createdAt: new Date(),
+  });
+
+  setJobInput("");
+  loadJobs(); // reload after adding
+};const loadJobs = async () => {
+  const querySnapshot = await getDocs(collection(db, "jobs"));
+  const jobsArray = querySnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+
+  setJobs(jobsArray);
+};import { useEffect } from "react";
+
+useEffect(() => {
+  loadJobs();
+}, []);
     await addDoc(collection(db, "jobs"), {
       name: input,
       createdAt: new Date()
