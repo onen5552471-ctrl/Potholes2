@@ -76,4 +76,3 @@ export default function Dashboard() {
       <h2>Total Revenue: ${totalRevenue}</h2>
     </div>
   );
-}
