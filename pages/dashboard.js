@@ -5,12 +5,22 @@ export default function Dashboard() {
   const [location, setLocation] = useState("");
   const [size, setSize] = useState("");
   const [price, setPrice] = useState("");
+const addJob = async () => {
+  if (!location || !size || !price) {
+    alert("Fill all fields");
+    return;
+  }
 
-  const addJob = () => {
-    if (!location || !size || !price) {
-      alert("Fill all fields");
-      return;
-    }
+  await addDoc(collection(db, "jobs"), {
+    location,
+    size,
+    price: parseFloat(price),
+    status: "Pending",
+  });
+
+  alert("Job saved!");
+};
+  
 
     const newJob = {
       location,
