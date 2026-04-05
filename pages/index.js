@@ -1,12 +1,23 @@
 import { useRouter } from "next/router";
-const [jobs, setJobs] = useState(() => {
-  const saved = localStorage.getItem("jobs");
-  return saved ? JSON.parse(saved) : [];
-});
-const [jobs, setJobs] = useState(() => {
-  const saved = localStorage.getItem("jobs");
-  return saved ? JSON.parse(saved) : [];
-});
+import { useState, useEffect } from "react";
+
+export default function Home() {
+  const router = useRouter();
+
+  // Load jobs from localStorage
+  const [jobs, setJobs] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("jobs");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  // SAVE jobs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("jobs", JSON.stringify(jobs));
+  }, [jobs]);
+
   return (
     <div style={{ padding: 20 }}>
       <h1>Potholez 🚧</h1>
