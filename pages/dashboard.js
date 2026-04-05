@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [price, setPrice] = useState("");
   const [worker, setWorker] = useState("");
   const [location, setLocation] = useState("");
+  const [photo, setPhoto] = useState("");
 
   // Load jobs
   const loadJobs = async () => {
@@ -39,6 +40,7 @@ export default function Dashboard() {
       price: Number(price),
       worker,
       location,
+      photo,
       completed: false,
       createdAt: new Date(),
     });
@@ -47,6 +49,7 @@ export default function Dashboard() {
     setPrice("");
     setWorker("");
     setLocation("");
+    setPhoto("");
     loadJobs();
   };
 
@@ -64,16 +67,35 @@ export default function Dashboard() {
     loadJobs();
   };
 
+  // Generate invoice
+  const generateInvoice = (job) => {
+    const text = `
+INVOICE
+--------
+Job: ${job.name}
+Worker: ${job.worker || "N/A"}
+Location: ${job.location || "N/A"}
+Price: $${job.price}
+Status: ${job.completed ? "Completed" : "Pending"}
+Date: ${new Date().toLocaleDateString()}
+    `;
+    alert(text);
+  };
+
   // Totals
   const total = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
 
   const today = new Date().toDateString();
   const todayTotal = jobs
-    .filter((j) => new Date(j.createdAt?.seconds * 1000).toDateString() === today)
+    .filter((j) =>
+      j.createdAt?.seconds
+        ? new Date(j.createdAt.seconds * 1000).toDateString() === today
+        : false
+    )
     .reduce((sum, j) => sum + (j.price || 0), 0);
 
   return (
-    <div style={{ padding: 20, fontFamily: "Arial" }}>
+    <div style={{ padding: 20, fontFamily: "Arial", maxWidth: 500, margin: "auto" }}>
       <h1>Pothole Dashboard</h1>
 
       <h2>Total: ${total}</h2>
@@ -105,6 +127,12 @@ export default function Dashboard() {
           placeholder="Location"
         />
 
+        <input
+          value={photo}
+          onChange={(e) => setPhoto(e.target.value)}
+          placeholder="Photo URL"
+        />
+
         <button onClick={addJob}>Add Job</button>
       </div>
 
@@ -120,19 +148,25 @@ export default function Dashboard() {
             }}
           >
             <strong>{job.name}</strong> - ${job.price}
+
             <div>👷 {job.worker || "N/A"}</div>
             <div>📍 {job.location || "N/A"}</div>
+
+            {job.photo && (
+              <img
+                src={job.photo}
+                alt="job"
+                style={{ width: 100, marginTop: 5 }}
+              />
+            )}
+
             <div>
               {job.completed ? "✅ Completed" : "❌ Pending"}
             </div>
 
-            <button onClick={() => toggleComplete(job)}>
-              Toggle
-            </button>
-
-            <button onClick={() => deleteJob(job.id)}>
-              Delete
-            </button>
+            <button onClick={() => toggleComplete(job)}>Toggle</button>
+            <button onClick={() => deleteJob(job.id)}>Delete</button>
+            <button onClick={() => generateInvoice(job)}>Invoice</button>
           </li>
         ))}
       </ul>
