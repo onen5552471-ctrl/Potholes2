@@ -1,14 +1,26 @@
 import { initializeApp } from "firebase/app";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
+  apiKey: "AIzaSyBRh-CGTPNYyRKKal87QRucG9pCp8cVDcM",
+  authDomain: "pothole-6b684.firebaseapp.com",
+  projectId: "pothole-6b684",
+  storageBucket: "pothole-6b684.firebasestorage.app",
+  messagingSenderId: "711077283246",
+  appId: "1:711077283246:web:c6147d5e3f0d0f5add343f",
+  measurementId: "G-15E94WM26F"
 };
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app);
-export const auth = getAuth(app);
+// ✅ Firestore (THIS is what saves data)
+const db = getFirestore(app);
+
+// ✅ Safe analytics
+let analytics;
+isSupported().then((yes) => {
+  if (yes) analytics = getAnalytics(app);
+});
+
+export { db };
