@@ -1,36 +1,48 @@
 import { useState, useEffect } from "react";
+import { db } from "../firebase";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 
 export default function Dashboard() {
-  // LOAD jobs from localStorage
-  const [jobs, setJobs] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("jobs");
-      return saved ? JSON.parse(saved) : [];
-    }
-    return [];
-  });
-
+  const [jobs, setJobs] = useState([]);
   const [location, setLocation] = useState("");
   const [size, setSize] = useState("");
 
-  // SAVE jobs whenever they change
+  // LOAD jobs from Firebase
   useEffect(() => {
-    localStorage.setItem("jobs", JSON.stringify(jobs));
-  }, [jobs]);
+    const loadJobs = async () => {
+      const querySnapshot = await getDocs(collection(db, "jobs"));
+      const jobsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setJobs(jobsData);
+    };
 
-  const addJob = () => {
+    loadJobs();
+  }, []);
+
+  // ADD job to Firebase
+  const addJob = async () => {
     if (!location || !size) {
       alert("Fill all fields");
       return;
     }
 
-    const newJob = {
+    await addDoc(collection(db, "jobs"), {
       location,
       size,
-      status: "pending",
-    };
+      status: "pending"
+    });
 
-    setJobs([...jobs, newJob]);
+    alert("Job saved!");
+
+    // reload jobs
+    const querySnapshot = await getDocs(collection(db, "jobs"));
+    const jobsData = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+    setJobs(jobsData);
 
     setLocation("");
     setSize("");
@@ -57,8 +69,8 @@ export default function Dashboard() {
       <button onClick={addJob}>Add Job</button>
 
       <h2>Jobs</h2>
-      {jobs.map((job, index) => (
-        <div key={index}>
+      {jobs.map((job) => (
+        <div key={job.id}>
           {job.location} - {job.size} - {job.status}
         </div>
       ))}
