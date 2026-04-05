@@ -4,9 +4,9 @@ import { collection, addDoc, getDocs } from "firebase/firestore";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
-  const [input, setInput] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
 
-  // Load jobs
   const loadJobs = async () => {
     const querySnapshot = await getDocs(collection(db, "jobs"));
     const jobsArray = querySnapshot.docs.map((doc) => ({
@@ -20,34 +20,49 @@ export default function Dashboard() {
     loadJobs();
   }, []);
 
-  // Add job
   const addJob = async () => {
-    if (!input) return;
+    if (!name || !price) return;
 
     await addDoc(collection(db, "jobs"), {
-      name: input,
+      name: name,
+      price: Number(price),
       createdAt: new Date(),
     });
 
-    setInput("");
+    setName("");
+    setPrice("");
     loadJobs();
   };
+
+  // 💰 total earnings
+  const total = jobs.reduce((sum, job) => sum + (job.price || 0), 0);
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Dashboard</h1>
 
+      <h2>Total: ${total}</h2>
+
       <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="Enter job"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Job name"
+      />
+
+      <input
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+        placeholder="Price"
+        type="number"
       />
 
       <button onClick={addJob}>Add Job</button>
 
       <ul>
         {jobs.map((job) => (
-          <li key={job.id}>{job.name}</li>
+          <li key={job.id}>
+            {job.name} - ${job.price}
+          </li>
         ))}
       </ul>
     </div>
