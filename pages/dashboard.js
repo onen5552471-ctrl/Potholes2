@@ -1,31 +1,39 @@
-import { useState } from "react";
-import { db } from "../firebase";
-import { collection, addDoc } from "firebase/firestore";
+import { useState, useEffect } from "react";
 
 export default function Dashboard() {
+  // LOAD jobs from localStorage
+  const [jobs, setJobs] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("jobs");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
   const [location, setLocation] = useState("");
   const [size, setSize] = useState("");
-  const [notes, setNotes] = useState("");
 
-  const addJob = async () => {
+  // SAVE jobs whenever they change
+  useEffect(() => {
+    localStorage.setItem("jobs", JSON.stringify(jobs));
+  }, [jobs]);
+
+  const addJob = () => {
     if (!location || !size) {
       alert("Fill all fields");
       return;
     }
 
-    await addDoc(collection(db, "jobs"), {
+    const newJob = {
       location,
       size,
-      notes,
       status: "pending",
-      createdAt: new Date()
-    });
+    };
+
+    setJobs([...jobs, newJob]);
 
     setLocation("");
     setSize("");
-    setNotes("");
-
-    alert("Job added!");
   };
 
   return (
@@ -40,20 +48,20 @@ export default function Dashboard() {
       <br /><br />
 
       <input
-        placeholder="Pothole Size"
+        placeholder="Size"
         value={size}
         onChange={(e) => setSize(e.target.value)}
       />
       <br /><br />
 
-      <textarea
-        placeholder="Notes"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-      />
-      <br /><br />
-
       <button onClick={addJob}>Add Job</button>
+
+      <h2>Jobs</h2>
+      {jobs.map((job, index) => (
+        <div key={index}>
+          {job.location} - {job.size} - {job.status}
+        </div>
+      ))}
     </div>
   );
 }
