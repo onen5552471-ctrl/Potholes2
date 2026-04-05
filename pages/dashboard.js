@@ -11,8 +11,6 @@ import {
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
-  const [error, setError] = useState("");
-
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [worker, setWorker] = useState("");
@@ -21,23 +19,26 @@ export default function Dashboard() {
 
   const [filterWorker, setFilterWorker] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("all");
 
-  // LOAD JOBS
+  // Load jobs
   const loadJobs = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "jobs"));
 
-      const jobsArray = querySnapshot.docs.map((docItem) => ({
-        id: docItem.id,
-        ...docItem.data(),
-      }));
+      const jobsArray = querySnapshot.docs
+        .map((docItem) => ({
+          id: docItem.id,
+          ...docItem.data(),
+        }))
+        .sort((a, b) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return bTime - aTime;
+        });
 
       setJobs(jobsArray);
     } catch (err) {
-      console.error(err);
-      setError("Error loading jobs");
+      console.error("Load error:", err);
     }
   };
 
@@ -45,14 +46,14 @@ export default function Dashboard() {
     loadJobs();
   }, []);
 
-  // ADD JOB
+  // Add job
   const addJob = async () => {
-    try {
-      if (!name || !price) {
-        alert("Enter job name and price");
-        return;
-      }
+    if (!name || !price) {
+      alert("Name and price required");
+      return;
+    }
 
+    try {
       await addDoc(collection(db, "jobs"), {
         name,
         price: Number(price),
@@ -60,10 +61,8 @@ export default function Dashboard() {
         location,
         photo,
         completed: false,
-        createdAt: new Date().toISOString(),
+        createdAt: new Date(),
       });
-
-      alert("Job added ✅");
 
       setName("");
       setPrice("");
@@ -73,36 +72,36 @@ export default function Dashboard() {
 
       loadJobs();
     } catch (err) {
-      console.error(err);
-      alert("Error adding job: " + err.message);
+      console.error("Add error:", err);
+      alert("Failed to add job");
     }
   };
 
-  // DELETE
+  // Delete job
   const deleteJob = async (id) => {
     try {
       await deleteDoc(doc(db, "jobs", id));
       loadJobs();
-    } catch {
-      setError("Delete failed");
+    } catch (err) {
+      console.error("Delete error:", err);
     }
   };
 
-  // TOGGLE COMPLETE
+  // Toggle complete
   const toggleComplete = async (job) => {
     try {
       await updateDoc(doc(db, "jobs", job.id), {
         completed: !job.completed,
       });
       loadJobs();
-    } catch {
-      setError("Update failed");
+    } catch (err) {
+      console.error("Update error:", err);
     }
   };
 
-  // INVOICE
+  // Invoice
   const generateInvoice = (job) => {
-    alert(`
+    const text = `
 INVOICE
 --------
 Job: ${job.name}
@@ -111,55 +110,33 @@ Location: ${job.location || "N/A"}
 Price: $${job.price}
 Status: ${job.completed ? "Completed" : "Pending"}
 Date: ${new Date().toLocaleDateString()}
-    `);
+    `;
+    alert(text);
   };
 
-  // TOTALS
+  // Totals
   const total = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
 
   const completedTotal = jobs
     .filter((j) => j.completed)
     .reduce((sum, j) => sum + (j.price || 0), 0);
 
+  const today = new Date().toDateString();
   const todayTotal = jobs
-    .filter((j) => {
-      try {
-        return (
-          new Date(j.createdAt).toDateString() ===
-          new Date().toDateString()
-        );
-      } catch {
-        return false;
-      }
-    })
+    .filter((j) =>
+      j.createdAt?.seconds
+        ? new Date(j.createdAt.seconds * 1000).toDateString() === today
+        : false
+    )
     .reduce((sum, j) => sum + (j.price || 0), 0);
-
-  // WORKER TOTALS
-  const workerTotals = jobs.reduce((acc, job) => {
-    if (!job.worker) return acc;
-    acc[job.worker] = (acc[job.worker] || 0) + (job.price || 0);
-    return acc;
-  }, {});
 
   return (
     <div style={{ padding: 20, fontFamily: "Arial", maxWidth: 500, margin: "auto" }}>
       <h1>Pothole Dashboard</h1>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
       <h2>Total: ${total}</h2>
       <h3>Today: ${todayTotal}</h3>
       <h3>Completed: ${completedTotal}</h3>
-
-      {/* WORKER TOTALS */}
-      <div style={{ marginBottom: 20 }}>
-        <h3>Worker Earnings:</h3>
-        {Object.keys(workerTotals).map((w) => (
-          <div key={w}>
-            {w}: ${workerTotals[w]}
-          </div>
-        ))}
-      </div>
 
       {/* ADD JOB */}
       <div style={{ marginBottom: 20 }}>
@@ -168,22 +145,26 @@ Date: ${new Date().toLocaleDateString()}
           onChange={(e) => setName(e.target.value)}
           placeholder="Job name"
         />
+
         <input
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Price"
           type="number"
         />
+
         <input
           value={worker}
           onChange={(e) => setWorker(e.target.value)}
           placeholder="Worker"
         />
+
         <input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Location"
         />
+
         <input
           value={photo}
           onChange={(e) => setPhoto(e.target.value)}
@@ -211,31 +192,12 @@ Date: ${new Date().toLocaleDateString()}
         </select>
       </div>
 
-      {/* SEARCH */}
-      <div style={{ marginBottom: 15 }}>
-        <input
-          placeholder="Search job"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-        >
-          <option value="all">All Time</option>
-          <option value="today">Today</option>
-        </select>
-      </div>
-
       {/* JOB LIST */}
-      <ul>
+      <ul style={{ listStyle: "none", padding: 0 }}>
         {jobs
           .filter((job) =>
             filterWorker
-              ? (job.worker || "")
-                  .toLowerCase()
-                  .includes(filterWorker.toLowerCase())
+              ? job.worker?.toLowerCase().includes(filterWorker.toLowerCase())
               : true
           )
           .filter((job) => {
@@ -243,56 +205,48 @@ Date: ${new Date().toLocaleDateString()}
             if (filterStatus === "pending") return !job.completed;
             return true;
           })
-          .filter((job) =>
-            search
-              ? job.name?.toLowerCase().includes(search.toLowerCase())
-              : true
-          )
-          .filter((job) => {
-            if (dateFilter === "today") {
-              try {
-                return (
-                  new Date(job.createdAt).toDateString() ===
-                  new Date().toDateString()
-                );
-              } catch {
-                return false;
-              }
-            }
-            return true;
-          })
-          .map((job) => {
-            return (
-              <li key={job.id}>
-                <strong>{job.name}</strong> - ${job.price}
+          .map((job) => (
+            <li
+              key={job.id}
+              style={{
+                marginBottom: 10,
+                padding: 10,
+                background: job.completed ? "#d4edda" : "#f8d7da",
+                borderRadius: 8,
+              }}
+            >
+              <strong>{job.name}</strong> - ${job.price}
 
-                <div>👷 {job.worker || "N/A"}</div>
-                <div>📍 {job.location || "N/A"}</div>
+              <div>👷 {job.worker || "N/A"}</div>
+              <div>📍 {job.location || "N/A"}</div>
 
-                {job.photo && (
-                  <img
-                    src={job.photo}
-                    alt="job"
-                    style={{ width: 100 }}
-                  />
-                )}
+              {job.photo && (
+                <img
+                  src={job.photo}
+                  alt="job"
+                  style={{ width: 100, marginTop: 5 }}
+                />
+              )}
 
-                <div>
-                  {job.completed ? "✅ Completed" : "❌ Pending"}
-                </div>
+              <div>
+                {job.completed ? "✅ Completed" : "❌ Pending"}
+              </div>
 
+              <div style={{ marginTop: 10 }}>
                 <button onClick={() => toggleComplete(job)}>
-                  Toggle
+                  {job.completed ? "Undo" : "Complete"}
                 </button>
+
                 <button onClick={() => deleteJob(job.id)}>
                   Delete
                 </button>
+
                 <button onClick={() => generateInvoice(job)}>
                   Invoice
                 </button>
-              </li>
-            );
-          })}
+              </div>
+            </li>
+          ))}
       </ul>
     </div>
   );
