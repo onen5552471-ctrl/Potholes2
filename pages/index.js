@@ -1,3 +1,5 @@
+import { db } from "../firebase";
+import { collection, addDoc } from "firebase/firestore";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 
