@@ -11,6 +11,8 @@ import {
 export default function Home() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
+  const [cost, setCost] = useState("");
+  const [customer, setCustomer] = useState("");
   const [jobs, setJobs] = useState([]);
 
   // 🔄 Load jobs
@@ -29,7 +31,7 @@ export default function Home() {
 
   // ➕ Add job
   async function addJob() {
-    if (!name || !price) {
+    if (!name || !price || !cost || !customer) {
       alert("Fill everything");
       return;
     }
@@ -37,14 +39,19 @@ export default function Home() {
     try {
       await addDoc(collection(db, "jobs"), {
         name,
+        customer,
         price: Number(price),
+        cost: Number(cost),
+        profit: Number(price) - Number(cost),
         createdAt: new Date()
       });
 
       setName("");
       setPrice("");
+      setCost("");
+      setCustomer("");
 
-      loadJobs(); // refresh list
+      loadJobs();
     } catch (err) {
       console.error(err);
       alert("Error saving");
@@ -57,45 +64,87 @@ export default function Home() {
     loadJobs();
   }
 
-  // 💰 Total revenue
-  const total = jobs.reduce((sum, job) => sum + (job.price || 0), 0);
+  // 💰 Calculations
+  const totalRevenue = jobs.reduce((sum, job) => sum + (job.price || 0), 0);
+  const totalCost = jobs.reduce((sum, job) => sum + (job.cost || 0), 0);
+  const totalProfit = jobs.reduce((sum, job) => sum + (job.profit || 0), 0);
+
+  // 📅 Today’s jobs
+  const today = new Date().toDateString();
+  const todayJobs = jobs.filter(
+    job => new Date(job.createdAt?.seconds * 1000).toDateString() === today
+  );
+
+  const todayTotal = todayJobs.reduce((sum, job) => sum + (job.price || 0), 0);
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Pothole Dashboard</h1>
+      <h1>Pothole Business Dashboard</h1>
 
-      <h2>Total: ${total}</h2>
+      {/* 📊 Stats */}
+      <h2>Total Revenue: ${totalRevenue}</h2>
+      <h3>Total Cost: ${totalCost}</h3>
+      <h2>Profit: ${totalProfit}</h2>
+      <h3>Today: ${todayTotal}</h3>
 
+      <hr />
+
+      {/* 📝 Inputs */}
       <input
         placeholder="Job Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
-
       <br /><br />
 
       <input
-        placeholder="Price"
+        placeholder="Customer Name"
+        value={customer}
+        onChange={(e) => setCustomer(e.target.value)}
+      />
+      <br /><br />
+
+      <input
+        placeholder="Price ($)"
         type="number"
         value={price}
         onChange={(e) => setPrice(e.target.value)}
       />
+      <br /><br />
 
+      <input
+        placeholder="Cost ($)"
+        type="number"
+        value={cost}
+        onChange={(e) => setCost(e.target.value)}
+      />
       <br /><br />
 
       <button onClick={addJob}>Add Job</button>
 
       <hr />
 
+      {/* 📋 Job List */}
       <h2>Jobs</h2>
 
       {jobs.map(job => (
-        <div key={job.id} style={{ marginBottom: 10 }}>
-          <strong>{job.name}</strong> - ${job.price}
-          <button
-            onClick={() => deleteJob(job.id)}
-            style={{ marginLeft: 10 }}
-          >
+        <div
+          key={job.id}
+          style={{
+            marginBottom: 15,
+            padding: 10,
+            border: "1px solid #ccc"
+          }}
+        >
+          <strong>{job.name}</strong><br />
+          Customer: {job.customer} <br />
+          Revenue: ${job.price} <br />
+          Cost: ${job.cost} <br />
+          Profit: ${job.profit}
+
+          <br />
+
+          <button onClick={() => deleteJob(job.id)}>
             Delete
           </button>
         </div>
