@@ -5,7 +5,20 @@ import { useState, useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
+async function addJob() {
+  try {
+    await addDoc(collection(db, "jobs"), {
+      name: "Test Job",
+      price: 100,
+      createdAt: new Date()
+    });
 
+    alert("Saved!");
+  } catch (err) {
+    console.error(err);
+    alert("Error saving");
+  }
+}
   // Load jobs from localStorage
   const [jobs, setJobs] = useState(() => {
     if (typeof window !== "undefined") {
