@@ -1,8 +1,12 @@
 import { useRouter } from "next/router";
-
-export default function Home() {
-  const router = useRouter();
-
+const [jobs, setJobs] = useState(() => {
+  const saved = localStorage.getItem("jobs");
+  return saved ? JSON.parse(saved) : [];
+});
+const [jobs, setJobs] = useState(() => {
+  const saved = localStorage.getItem("jobs");
+  return saved ? JSON.parse(saved) : [];
+});
   return (
     <div style={{ padding: 20 }}>
       <h1>Potholez 🚧</h1>
