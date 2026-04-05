@@ -4,48 +4,40 @@ import { collection, addDoc, getDocs } from "firebase/firestore";
 
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
-  const [location, setLocation] = useState("");
-  const [size, setSize] = useState("");
+  const [input, setInput] = useState("");
 
   // LOAD jobs from Firebase
   useEffect(() => {
-    const loadJobs = async () => {
+    const fetchJobs = async () => {
       const querySnapshot = await getDocs(collection(db, "jobs"));
-      const jobsData = querySnapshot.docs.map(doc => ({
+      const jobsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      setJobs(jobsData);
+      setJobs(jobsList);
     };
 
-    loadJobs();
+    fetchJobs();
   }, []);
 
   // ADD job to Firebase
   const addJob = async () => {
-    if (!location || !size) {
-      alert("Fill all fields");
-      return;
-    }
+    if (!input) return;
 
     await addDoc(collection(db, "jobs"), {
-      location,
-      size,
-      status: "pending"
+      name: input,
+      createdAt: new Date()
     });
 
-    alert("Job saved!");
+    setInput("");
 
     // reload jobs
     const querySnapshot = await getDocs(collection(db, "jobs"));
-    const jobsData = querySnapshot.docs.map(doc => ({
+    const jobsList = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }));
-    setJobs(jobsData);
-
-    setLocation("");
-    setSize("");
+    setJobs(jobsList);
   };
 
   return (
@@ -53,27 +45,18 @@ export default function Dashboard() {
       <h1>Dashboard</h1>
 
       <input
-        placeholder="Location"
-        value={location}
-        onChange={(e) => setLocation(e.target.value)}
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Enter job"
       />
-      <br /><br />
-
-      <input
-        placeholder="Size"
-        value={size}
-        onChange={(e) => setSize(e.target.value)}
-      />
-      <br /><br />
 
       <button onClick={addJob}>Add Job</button>
 
-      <h2>Jobs</h2>
-      {jobs.map((job) => (
-        <div key={job.id}>
-          {job.location} - {job.size} - {job.status}
-        </div>
-      ))}
+      <ul>
+        {jobs.map(job => (
+          <li key={job.id}>{job.name}</li>
+        ))}
+      </ul>
     </div>
   );
 }
