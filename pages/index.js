@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import { db, auth } from "../firebase";
 import {
@@ -191,7 +192,7 @@ export default function Home() {
       margin: "auto",
       fontFamily: "sans-serif"
     }}>
-      <h1 style={{ textAlign: "center" }}>🚧 Pothole Pro</h1>
+      <h1 style={{ textAlign: "center" }}<h1>IT UPDATED 🔥</h1>
 
       <button onClick={logout} style={{
         width: "100%",
