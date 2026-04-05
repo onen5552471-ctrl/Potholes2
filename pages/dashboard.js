@@ -7,7 +7,6 @@ import {
   deleteDoc,
   doc,
   updateDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
 export default function Dashboard() {
@@ -33,14 +32,8 @@ export default function Dashboard() {
         ...docItem.data(),
       }))
       .sort((a, b) => {
-        const dateA = a.createdAt?.seconds
-          ? a.createdAt.seconds * 1000
-          : new Date(a.createdAt || 0).getTime();
-
-        const dateB = b.createdAt?.seconds
-          ? b.createdAt.seconds * 1000
-          : new Date(b.createdAt || 0).getTime();
-
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
         return dateB - dateA;
       });
 
@@ -62,7 +55,7 @@ export default function Dashboard() {
       location,
       photo,
       completed: false,
-      createdAt: serverTimestamp(), // FIXED
+      createdAt: new Date().toISOString(), // ✅ FIXED
     });
 
     setName("");
@@ -111,10 +104,7 @@ Date: ${new Date().toLocaleDateString()}
 
   const todayTotal = jobs
     .filter((j) => {
-      const jobDate = j.createdAt?.seconds
-        ? new Date(j.createdAt.seconds * 1000)
-        : new Date(j.createdAt || 0);
-
+      const jobDate = new Date(j.createdAt || 0);
       return jobDate.toDateString() === new Date().toDateString();
     })
     .reduce((sum, j) => sum + (j.price || 0), 0);
@@ -134,7 +124,6 @@ Date: ${new Date().toLocaleDateString()}
       <h3>Today: ${todayTotal}</h3>
       <h3>Completed: ${completedTotal}</h3>
 
-      {/* Worker totals */}
       <div style={{ marginBottom: 20 }}>
         <h3>Worker Earnings:</h3>
         {Object.keys(workerTotals).map((w) => (
@@ -144,17 +133,15 @@ Date: ${new Date().toLocaleDateString()}
         ))}
       </div>
 
-      {/* Inputs */}
       <div style={{ marginBottom: 20 }}>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Job name" style={{ display: "block", marginBottom: 8 }} />
-        <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price" type="number" style={{ display: "block", marginBottom: 8 }} />
-        <input value={worker} onChange={(e) => setWorker(e.target.value)} placeholder="Worker" style={{ display: "block", marginBottom: 8 }} />
-        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ display: "block", marginBottom: 8 }} />
-        <input value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="Photo URL" style={{ display: "block", marginBottom: 8 }} />
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Job name" />
+        <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price" type="number" />
+        <input value={worker} onChange={(e) => setWorker(e.target.value)} placeholder="Worker" />
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" />
+        <input value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="Photo URL" />
         <button onClick={addJob}>Add Job</button>
       </div>
 
-      {/* Filters */}
       <div style={{ marginBottom: 15 }}>
         <input
           placeholder="Filter by worker"
@@ -162,11 +149,7 @@ Date: ${new Date().toLocaleDateString()}
           onChange={(e) => setFilterWorker(e.target.value)}
         />
 
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          style={{ marginLeft: 10 }}
-        >
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="all">All</option>
           <option value="completed">Completed</option>
           <option value="pending">Pending</option>
@@ -180,20 +163,13 @@ Date: ${new Date().toLocaleDateString()}
           onChange={(e) => setSearch(e.target.value)}
         />
 
-        <select
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          style={{ marginLeft: 10 }}
-        >
+        <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
           <option value="all">All Time</option>
           <option value="today">Today</option>
         </select>
       </div>
 
-      {/* Jobs */}
-      <ul style={{ listStyle: "none", padding: 0 }}>
-        {jobs.length === 0 && <p>No jobs yet</p>}
-
+      <ul>
         {jobs
           .filter((job) =>
             filterWorker
@@ -212,54 +188,18 @@ Date: ${new Date().toLocaleDateString()}
           )
           .filter((job) => {
             if (dateFilter === "today") {
-              const jobDate = job.createdAt?.seconds
-                ? new Date(job.createdAt.seconds * 1000)
-                : new Date(job.createdAt || 0);
-
+              const jobDate = new Date(job.createdAt || 0);
               return jobDate.toDateString() === new Date().toDateString();
             }
             return true;
           })
           .map((job) => (
-            <li
-              key={job.id}
-              style={{
-                marginBottom: 10,
-                padding: 10,
-                background: job.completed ? "#d4edda" : "#f8d7da",
-                borderRadius: 8,
-              }}
-            >
-              <strong>{job.name}</strong> - ${job.price}
+            <li key={job.id}>
+              {job.name} - ${job.price} - {job.completed ? "✅" : "❌"}
 
-              <div>👷 {job.worker || "N/A"}</div>
-              <div>📍 {job.location || "N/A"}</div>
-
-              {job.photo && (
-                <img
-                  src={job.photo}
-                  alt="job"
-                  style={{ width: 100, marginTop: 5 }}
-                />
-              )}
-
-              <div>
-                {job.completed ? "✅ Completed" : "❌ Pending"}
-              </div>
-
-              <div style={{ marginTop: 10 }}>
-                <button onClick={() => toggleComplete(job)}>
-                  {job.completed ? "Undo" : "Complete"}
-                </button>
-
-                <button onClick={() => deleteJob(job.id)} style={{ marginLeft: 8 }}>
-                  Delete
-                </button>
-
-                <button onClick={() => generateInvoice(job)} style={{ marginLeft: 8 }}>
-                  Invoice
-                </button>
-              </div>
+              <button onClick={() => toggleComplete(job)}>Toggle</button>
+              <button onClick={() => deleteJob(job.id)}>Delete</button>
+              <button onClick={() => generateInvoice(job)}>Invoice</button>
             </li>
           ))}
       </ul>
