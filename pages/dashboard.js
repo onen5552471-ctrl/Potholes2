@@ -17,13 +17,21 @@ export default function Dashboard() {
   const [location, setLocation] = useState("");
   const [photo, setPhoto] = useState("");
 
+  // NEW filters
+  const [filterWorker, setFilterWorker] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
   // Load jobs
   const loadJobs = async () => {
     const querySnapshot = await getDocs(collection(db, "jobs"));
-    const jobsArray = querySnapshot.docs.map((docItem) => ({
-      id: docItem.id,
-      ...docItem.data(),
-    }));
+
+    const jobsArray = querySnapshot.docs
+      .map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      }))
+      .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+
     setJobs(jobsArray);
   };
 
@@ -67,7 +75,7 @@ export default function Dashboard() {
     loadJobs();
   };
 
-  // Generate invoice
+  // Invoice
   const generateInvoice = (job) => {
     const text = `
 INVOICE
@@ -85,6 +93,10 @@ Date: ${new Date().toLocaleDateString()}
   // Totals
   const total = jobs.reduce((sum, j) => sum + (j.price || 0), 0);
 
+  const completedTotal = jobs
+    .filter((j) => j.completed)
+    .reduce((sum, j) => sum + (j.price || 0), 0);
+
   const today = new Date().toDateString();
   const todayTotal = jobs
     .filter((j) =>
@@ -100,12 +112,14 @@ Date: ${new Date().toLocaleDateString()}
 
       <h2>Total: ${total}</h2>
       <h3>Today: ${todayTotal}</h3>
+      <h3>Completed: ${completedTotal}</h3>
 
       <div style={{ marginBottom: 20 }}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Job name"
+          style={{ display: "block", marginBottom: 8 }}
         />
 
         <input
@@ -113,62 +127,112 @@ Date: ${new Date().toLocaleDateString()}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="Price"
           type="number"
+          style={{ display: "block", marginBottom: 8 }}
         />
 
         <input
           value={worker}
           onChange={(e) => setWorker(e.target.value)}
           placeholder="Worker"
+          style={{ display: "block", marginBottom: 8 }}
         />
 
         <input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Location"
+          style={{ display: "block", marginBottom: 8 }}
         />
 
         <input
           value={photo}
           onChange={(e) => setPhoto(e.target.value)}
           placeholder="Photo URL"
+          style={{ display: "block", marginBottom: 8 }}
         />
 
         <button onClick={addJob}>Add Job</button>
       </div>
 
+      {/* FILTERS */}
+      <div style={{ marginBottom: 15 }}>
+        <input
+          placeholder="Filter by worker"
+          value={filterWorker}
+          onChange={(e) => setFilterWorker(e.target.value)}
+        />
+
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          style={{ marginLeft: 10 }}
+        >
+          <option value="all">All</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+
       <ul style={{ listStyle: "none", padding: 0 }}>
-        {jobs.map((job) => (
-          <li
-            key={job.id}
-            style={{
-              marginBottom: 10,
-              padding: 10,
-              background: job.completed ? "#d4edda" : "#f8d7da",
-              borderRadius: 8,
-            }}
-          >
-            <strong>{job.name}</strong> - ${job.price}
+        {jobs
+          .filter((job) =>
+            filterWorker
+              ? job.worker?.toLowerCase().includes(filterWorker.toLowerCase())
+              : true
+          )
+          .filter((job) => {
+            if (filterStatus === "completed") return job.completed;
+            if (filterStatus === "pending") return !job.completed;
+            return true;
+          })
+          .map((job) => (
+            <li
+              key={job.id}
+              style={{
+                marginBottom: 10,
+                padding: 10,
+                background: job.completed ? "#d4edda" : "#f8d7da",
+                borderRadius: 8,
+              }}
+            >
+              <strong>{job.name}</strong> - ${job.price}
 
-            <div>👷 {job.worker || "N/A"}</div>
-            <div>📍 {job.location || "N/A"}</div>
+              <div>👷 {job.worker || "N/A"}</div>
+              <div>📍 {job.location || "N/A"}</div>
 
-            {job.photo && (
-              <img
-                src={job.photo}
-                alt="job"
-                style={{ width: 100, marginTop: 5 }}
-              />
-            )}
+              {job.photo && (
+                <img
+                  src={job.photo}
+                  alt="job"
+                  style={{ width: 100, marginTop: 5 }}
+                />
+              )}
 
-            <div>
-              {job.completed ? "✅ Completed" : "❌ Pending"}
-            </div>
+              <div>
+                {job.completed ? "✅ Completed" : "❌ Pending"}
+              </div>
 
-            <button onClick={() => toggleComplete(job)}>Toggle</button>
-            <button onClick={() => deleteJob(job.id)}>Delete</button>
-            <button onClick={() => generateInvoice(job)}>Invoice</button>
-          </li>
-        ))}
+              <div style={{ marginTop: 10 }}>
+                <button onClick={() => toggleComplete(job)}>
+                  {job.completed ? "Undo" : "Complete"}
+                </button>
+
+                <button
+                  onClick={() => deleteJob(job.id)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Delete
+                </button>
+
+                <button
+                  onClick={() => generateInvoice(job)}
+                  style={{ marginLeft: 8 }}
+                >
+                  Invoice
+                </button>
+              </div>
+            </li>
+          ))}
       </ul>
     </div>
   );
