@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 
 export default function Dashboard() {
@@ -17,9 +18,10 @@ export default function Dashboard() {
   const [location, setLocation] = useState("");
   const [photo, setPhoto] = useState("");
 
-  // NEW filters
   const [filterWorker, setFilterWorker] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [search, setSearch] = useState("");
+  const [dateFilter, setDateFilter] = useState("all");
 
   // Load jobs
   const loadJobs = async () => {
@@ -30,7 +32,17 @@ export default function Dashboard() {
         id: docItem.id,
         ...docItem.data(),
       }))
-      .sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds);
+      .sort((a, b) => {
+        const dateA = a.createdAt?.seconds
+          ? a.createdAt.seconds * 1000
+          : new Date(a.createdAt || 0).getTime();
+
+        const dateB = b.createdAt?.seconds
+          ? b.createdAt.seconds * 1000
+          : new Date(b.createdAt || 0).getTime();
+
+        return dateB - dateA;
+      });
 
     setJobs(jobsArray);
   };
@@ -50,7 +62,7 @@ export default function Dashboard() {
       location,
       photo,
       completed: false,
-      createdAt: new Date(),
+      createdAt: serverTimestamp(), // FIXED
     });
 
     setName("");
@@ -97,14 +109,22 @@ Date: ${new Date().toLocaleDateString()}
     .filter((j) => j.completed)
     .reduce((sum, j) => sum + (j.price || 0), 0);
 
-  const today = new Date().toDateString();
   const todayTotal = jobs
-    .filter((j) =>
-      j.createdAt?.seconds
-        ? new Date(j.createdAt.seconds * 1000).toDateString() === today
-        : false
-    )
+    .filter((j) => {
+      const jobDate = j.createdAt?.seconds
+        ? new Date(j.createdAt.seconds * 1000)
+        : new Date(j.createdAt || 0);
+
+      return jobDate.toDateString() === new Date().toDateString();
+    })
     .reduce((sum, j) => sum + (j.price || 0), 0);
+
+  // Worker totals
+  const workerTotals = jobs.reduce((acc, job) => {
+    if (!job.worker) return acc;
+    acc[job.worker] = (acc[job.worker] || 0) + (job.price || 0);
+    return acc;
+  }, {});
 
   return (
     <div style={{ padding: 20, fontFamily: "Arial", maxWidth: 500, margin: "auto" }}>
@@ -114,47 +134,27 @@ Date: ${new Date().toLocaleDateString()}
       <h3>Today: ${todayTotal}</h3>
       <h3>Completed: ${completedTotal}</h3>
 
+      {/* Worker totals */}
       <div style={{ marginBottom: 20 }}>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Job name"
-          style={{ display: "block", marginBottom: 8 }}
-        />
+        <h3>Worker Earnings:</h3>
+        {Object.keys(workerTotals).map((w) => (
+          <div key={w}>
+            {w}: ${workerTotals[w]}
+          </div>
+        ))}
+      </div>
 
-        <input
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="Price"
-          type="number"
-          style={{ display: "block", marginBottom: 8 }}
-        />
-
-        <input
-          value={worker}
-          onChange={(e) => setWorker(e.target.value)}
-          placeholder="Worker"
-          style={{ display: "block", marginBottom: 8 }}
-        />
-
-        <input
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="Location"
-          style={{ display: "block", marginBottom: 8 }}
-        />
-
-        <input
-          value={photo}
-          onChange={(e) => setPhoto(e.target.value)}
-          placeholder="Photo URL"
-          style={{ display: "block", marginBottom: 8 }}
-        />
-
+      {/* Inputs */}
+      <div style={{ marginBottom: 20 }}>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Job name" style={{ display: "block", marginBottom: 8 }} />
+        <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price" type="number" style={{ display: "block", marginBottom: 8 }} />
+        <input value={worker} onChange={(e) => setWorker(e.target.value)} placeholder="Worker" style={{ display: "block", marginBottom: 8 }} />
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" style={{ display: "block", marginBottom: 8 }} />
+        <input value={photo} onChange={(e) => setPhoto(e.target.value)} placeholder="Photo URL" style={{ display: "block", marginBottom: 8 }} />
         <button onClick={addJob}>Add Job</button>
       </div>
 
-      {/* FILTERS */}
+      {/* Filters */}
       <div style={{ marginBottom: 15 }}>
         <input
           placeholder="Filter by worker"
@@ -173,16 +173,51 @@ Date: ${new Date().toLocaleDateString()}
         </select>
       </div>
 
+      <div style={{ marginBottom: 15 }}>
+        <input
+          placeholder="Search job"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <select
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          style={{ marginLeft: 10 }}
+        >
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+        </select>
+      </div>
+
+      {/* Jobs */}
       <ul style={{ listStyle: "none", padding: 0 }}>
+        {jobs.length === 0 && <p>No jobs yet</p>}
+
         {jobs
           .filter((job) =>
             filterWorker
-              ? job.worker?.toLowerCase().includes(filterWorker.toLowerCase())
+              ? (job.worker || "").toLowerCase().includes(filterWorker.toLowerCase())
               : true
           )
           .filter((job) => {
             if (filterStatus === "completed") return job.completed;
             if (filterStatus === "pending") return !job.completed;
+            return true;
+          })
+          .filter((job) =>
+            search
+              ? job.name?.toLowerCase().includes(search.toLowerCase())
+              : true
+          )
+          .filter((job) => {
+            if (dateFilter === "today") {
+              const jobDate = job.createdAt?.seconds
+                ? new Date(job.createdAt.seconds * 1000)
+                : new Date(job.createdAt || 0);
+
+              return jobDate.toDateString() === new Date().toDateString();
+            }
             return true;
           })
           .map((job) => (
@@ -217,17 +252,11 @@ Date: ${new Date().toLocaleDateString()}
                   {job.completed ? "Undo" : "Complete"}
                 </button>
 
-                <button
-                  onClick={() => deleteJob(job.id)}
-                  style={{ marginLeft: 8 }}
-                >
+                <button onClick={() => deleteJob(job.id)} style={{ marginLeft: 8 }}>
                   Delete
                 </button>
 
-                <button
-                  onClick={() => generateInvoice(job)}
-                  style={{ marginLeft: 8 }}
-                >
+                <button onClick={() => generateInvoice(job)} style={{ marginLeft: 8 }}>
                   Invoice
                 </button>
               </div>
