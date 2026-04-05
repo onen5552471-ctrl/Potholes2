@@ -6,57 +6,31 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [input, setInput] = useState("");
 
-  // LOAD jobs from Firebase
-  useEffect(() => {
-    const fetchJobs = async () => {
-      const querySnapshot = await getDocs(collection(db, "jobs"));
-      const jobsList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setJobs(jobsList);
-    };
+  // Load jobs from Firebase
+  const loadJobs = async () => {
+    const querySnapshot = await getDocs(collection(db, "jobs"));
+    const jobsArray = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+    setJobs(jobsArray);
+  };
 
-    fetchJobs();
+  useEffect(() => {
+    loadJobs();
   }, []);
 
-const addJob = async () => {
-  if (!jobInput) return;
+  // Add a new job
+  const addJob = async () => {
+    if (!input) return;
 
-  await addDoc(collection(db, "jobs"), {
-    name: jobInput,
-    createdAt: new Date(),
-  });
-
-  setJobInput("");
-  loadJobs(); // reload after adding
-};const loadJobs = async () => {
-  const querySnapshot = await getDocs(collection(db, "jobs"));
-  const jobsArray = querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-
-  setJobs(jobsArray);
-};import { useEffect } from "react";
-
-useEffect(() => {
-  loadJobs();
-}, []);
     await addDoc(collection(db, "jobs"), {
       name: input,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     setInput("");
-
-    // reload jobs
-    const querySnapshot = await getDocs(collection(db, "jobs"));
-    const jobsList = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    setJobs(jobsList);
+    loadJobs();
   };
 
   return (
@@ -68,11 +42,10 @@ useEffect(() => {
         onChange={(e) => setInput(e.target.value)}
         placeholder="Enter job"
       />
-
       <button onClick={addJob}>Add Job</button>
 
       <ul>
-        {jobs.map(job => (
+        {jobs.map((job) => (
           <li key={job.id}>{job.name}</li>
         ))}
       </ul>
