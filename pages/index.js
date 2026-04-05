@@ -1,46 +1,50 @@
+import { useState } from "react";
 import { db } from "../firebase";
 import { collection, addDoc } from "firebase/firestore";
-import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
 
 export default function Home() {
-  const router = useRouter();
-async function addJob() {
-  try {
-    await addDoc(collection(db, "jobs"), {
-      name: "Test Job",
-      price: 100,
-      createdAt: new Date()
-    });
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
 
-    alert("Saved!");
-  } catch (err) {
-    console.error(err);
-    alert("Error saving");
-  }
-}
-  // Load jobs from localStorage
-  const [jobs, setJobs] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("jobs");
-      return saved ? JSON.parse(saved) : [];
+  async function addJob() {
+    try {
+      await addDoc(collection(db, "jobs"), {
+        name: name,
+        price: price,
+        createdAt: new Date()
+      });
+
+      alert("Saved!");
+
+      setName("");
+      setPrice("");
+    } catch (err) {
+      console.error(err);
+      alert("Error saving");
     }
-    return [];
-  });
-
-  // SAVE jobs to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem("jobs", JSON.stringify(jobs));
-  }, [jobs]);
+  }
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Potholez 🚧</h1>
-      <p>Report and manage pothole jobs.</p>
+      <h1>Pothole Jobs</h1>
 
-      <button onClick={() => router.push("/dashboard")}>
-        Go to Dashboard
-      </button>
+      <input
+        placeholder="Job Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+
+      <br /><br />
+
+      <input
+        placeholder="Price"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+      />
+
+      <br /><br />
+
+      <button onClick={addJob}>Add Job</button>
     </div>
   );
 }
