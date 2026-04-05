@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
 import {
