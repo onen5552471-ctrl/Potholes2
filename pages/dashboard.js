@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { db } from "../firebase";
-import { collection, addDoc, getDocs } from "firebase/firestore";
-
+import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+const deleteJob = async (id) => {
+  await deleteDoc(doc(db, "jobs", id));
+  loadJobs();
+};
 export default function Dashboard() {
   const [jobs, setJobs] = useState([]);
   const [input, setInput] = useState("");
@@ -44,11 +47,12 @@ export default function Dashboard() {
       />
       <button onClick={addJob}>Add Job</button>
 
-      <ul>
-        {jobs.map((job) => (
-          <li key={job.id}>{job.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
+   <ul>
+  {jobs.map((job) => (
+    <li key={job.id}>
+      {job.name}
+      <button onClick={() => deleteJob(job.id)}>❌</button>
+    </li>
+  ))}
+</ul>
 }
